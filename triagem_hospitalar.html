@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Motor de Triagem Hospitalar</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0e14;
+    --surface: #111620;
+    --surface2: #181f2e;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #e8edf5;
+    --muted: #6b7894;
+    --accent: #3b82f6;
+
+    --red:    #e24b4a;
+    --red-bg: rgba(226,75,74,0.1);
+    --red-border: rgba(226,75,74,0.3);
+
+    --orange:    #f59e0b;
+    --orange-bg: rgba(245,158,11,0.1);
+    --orange-border: rgba(245,158,11,0.3);
+
+    --yellow:    #d4c200;
+    --yellow-bg: rgba(212,194,0,0.1);
+    --yellow-border: rgba(212,194,0,0.3);
+
+    --green:    #22c55e;
+    --green-bg: rgba(34,197,94,0.1);
+    --green-border: rgba(34,197,94,0.3);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Instrument Sans', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-icon svg { width: 18px; height: 18px; }
+  .logo-text { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; line-height: 1.2; }
+  .logo-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
+
+  .proto-block { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .proto-title {
+    padding: 10px 14px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .proto-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    transition: background 0.15s;
+  }
+  .proto-row:last-child { border-bottom: none; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .dot-red    { background: var(--red); }
+  .dot-orange { background: var(--orange); }
+  .dot-yellow { background: var(--yellow); }
+  .dot-green  { background: var(--green); }
+  .proto-info { flex: 1; }
+  .proto-color { font-weight: 600; font-size: 11px; color: var(--text); }
+  .proto-desc { font-size: 10px; color: var(--muted); margin-top: 1px; line-height: 1.4; }
+  .proto-time { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+
+  .sidebar-footer { margin-top: auto; }
+  .sidebar-footer p { font-size: 10px; color: var(--muted); line-height: 1.6; }
+
+  /* ── Main ── */
+  .main { padding: 40px 48px; max-width: 900px; }
+
+  .page-header { margin-bottom: 36px; }
+  .page-header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px; font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .page-header p { font-size: 14px; color: var(--muted); }
+
+  /* ── Form ── */
+  .form-section { margin-bottom: 28px; }
+  .form-section-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .form-section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+  .field input, .field textarea {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text);
+    font-family: 'Instrument Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    width: 100%;
+  }
+  .field input::placeholder, .field textarea::placeholder { color: var(--muted); }
+  .field input:focus, .field textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+  }
+  .field textarea { resize: vertical; min-height: 72px; line-height: 1.6; }
+  .field-full { grid-column: 1 / -1; }
+
+  .vitals-row {
+    display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px;
+  }
+
+  /* ── Button ── */
+  .btn-run {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 14px 24px;
+    font-size: 14px; font-weight: 600;
+    font-family: 'Syne', sans-serif;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: opacity 0.15s, transform 0.1s;
+    margin-top: 8px;
+  }
+  .btn-run:hover { opacity: 0.9; }
+  .btn-run:active { transform: scale(0.99); }
+  .btn-run:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ── Divider ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 36px 0; }
+
+  /* ── Result ── */
+  .result-section { display: none; }
+  .result-section.show { display: block; }
+
+  .result-header { margin-bottom: 20px; }
+  .result-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px; font-weight: 700; margin-bottom: 4px;
+  }
+  .result-header p { font-size: 13px; color: var(--muted); }
+
+  .classification-card {
+    border-radius: 12px;
+    border: 1px solid;
+    padding: 24px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .classification-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: currentColor;
+  }
+
+  .clf-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+  .clf-badge {
+    display: inline-block;
+    padding: 5px 14px; border-radius: 999px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px; font-weight: 500;
+    border: 1px solid;
+  }
+  .clf-time {
+    text-align: right;
+  }
+  .clf-time .t-label { font-size: 11px; color: var(--muted); }
+  .clf-time .t-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px; font-weight: 800;
+    line-height: 1.1;
+  }
+
+  .clf-urgency {
+    font-family: 'Syne', sans-serif;
+    font-size: 26px; font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .metrics-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+    margin-bottom: 16px;
+  }
+  .metric-card {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .metric-card .mc-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .metric-card .mc-value { font-family: 'DM Mono', monospace; font-size: 16px; font-weight: 500; }
+
+  .alert-row {
+    background: rgba(226,75,74,0.07);
+    border: 1px solid rgba(226,75,74,0.2);
+    border-radius: 8px; padding: 12px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    display: none;
+  }
+  .alert-row.show { display: flex; align-items: flex-start; gap: 10px; }
+  .alert-row strong { color: var(--red); }
+
+  .tags-group { margin-bottom: 12px; }
+  .tags-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag {
+    padding: 4px 12px; border-radius: 999px;
+    font-size: 12px;
+    background: var(--surface2); color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .tag-alert {
+    border-color: rgba(226,75,74,0.3);
+    background: rgba(226,75,74,0.08);
+    color: #f09595;
+  }
+
+  /* ── JSON block ── */
+  .json-wrap { margin-top: 20px; }
+  .json-toggle {
+    background: none; border: 1px solid var(--border2);
+    border-radius: 8px; padding: 9px 16px;
+    font-size: 12px; color: var(--muted); cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    display: flex; align-items: center; gap: 6px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .json-toggle:hover { background: var(--surface2); color: var(--text); }
+  .json-block {
+    display: none;
+    margin-top: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 18px 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--muted);
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .json-block.show { display: block; }
+  .json-block .jk { color: #7dd3fc; }
+  .json-block .jv { color: #86efac; }
+  .json-block .js { color: #fca5a5; }
+
+  .patient-id-bar {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+  }
+  .pid-avatar {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700; font-size: 15px;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+  }
+  .pid-name { font-weight: 600; font-size: 15px; color: var(--text); }
+  .pid-age  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+
+  .error-msg {
+    display: none;
+    background: var(--red-bg); border: 1px solid var(--red-border);
+    border-radius: 8px; padding: 12px 16px;
+    font-size: 13px; color: #fca5a5; margin-top: 12px;
+  }
+  .error-msg.show { display: block; }
+
+  /* ── Loading ── */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+    .main { padding: 28px 20px; }
+    .vitals-row, .field-grid { grid-template-columns: 1fr; }
+    .metrics-row { grid-template-columns: 1fr 1fr; }
+    .clf-top { flex-direction: column; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 3v14M3 10h14" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="logo-text">TriageEngine</div>
+        <div class="logo-sub">Protocolo Manchester</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="proto-block">
+        <div class="proto-title">Classificação de risco</div>
+        <div class="proto-row">
+          <div class="dot dot-red"></div>
+          <div class="proto-info">
+            <div class="proto-color">Vermelho</div>
+            <div class="proto-desc">PA &gt; 180/120 · Temp &gt; 40°C ou &lt; 35°C · Condição crítica aguda</div>
+          </div>
+          <div class="proto-time">Imediato</div>
+        </div>
+        <div class="proto-row">
+          <div class="dot dot-orange"></div>
+          <div class="proto-info">
+            <div class="proto-color">Laranja</div>
+            <div class="proto-desc">PA &gt; 160/100 · Temp &gt; 39°C · Dor severa</div>
+          </div>
+          <div class="proto-time">10 min</div>
+        </div>
+        <div class="proto-row">
+          <div class="dot dot-yellow"></div>
+          <div class="proto-info">
+            <div class="proto-color">Amarelo</div>
+            <div class="proto-desc">PA moderada · Temp 38–38.9°C · Crônico com sintomas</div>
+          </div>
+          <div class="proto-time">60 min</div>
+        </div>
+        <div class="proto-row">
+          <div class="dot dot-green"></div>
+          <div class="proto-info">
+            <div class="proto-color">Verde</div>
+            <div class="proto-desc">Sinais estáveis · Sintomas leves · Sem complicações</div>
+          </div>
+          <div class="proto-time">120 min</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <p>Sistema automatizado de apoio à triagem. Não substitui avaliação médica presencial. Use com supervisão clínica.</p>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="page-header">
+      <h1>Motor de Triagem Hospitalar</h1>
+      <p>Insira os dados clínicos do paciente para obter a classificação de risco segundo o Protocolo de Manchester Adaptado.</p>
+    </div>
+
+    <!-- IDENTIFICAÇÃO -->
+    <div class="form-section">
+      <div class="form-section-label">Identificação do paciente</div>
+      <div class="field-grid">
+        <div class="field">
+          <label>Nome completo</label>
+          <input type="text" id="patient-name" placeholder="Ex: Maria Aparecida Silva" />
+        </div>
+        <div class="field">
+          <label>Idade (anos)</label>
+          <input type="number" id="patient-age" placeholder="Ex: 45" min="0" max="130" />
+        </div>
+      </div>
+    </div>
+
+    <!-- VITAIS -->
+    <div class="form-section">
+      <div class="form-section-label">Sinais vitais</div>
+      <div class="vitals-row">
+        <div class="field">
+          <label>Temperatura (°C)</label>
+          <input type="number" id="temp" placeholder="Ex: 38.5" step="0.1" min="25" max="45" />
+        </div>
+        <div class="field">
+          <label>Pressão sistólica (mmHg)</label>
+          <input type="number" id="bp-sys" placeholder="Ex: 160" min="60" max="250" />
+        </div>
+        <div class="field">
+          <label>Pressão diastólica (mmHg)</label>
+          <input type="number" id="bp-dia" placeholder="Ex: 100" min="40" max="160" />
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTÓRICO -->
+    <div class="form-section">
+      <div class="form-section-label">Histórico clínico</div>
+      <div class="field-grid">
+        <div class="field field-full">
+          <label>Comorbidades / doenças pré-existentes</label>
+          <textarea id="history" placeholder="Ex: Diabetes tipo 2, hipertensão arterial, doença renal crônica..."></textarea>
+        </div>
+        <div class="field field-full">
+          <label>Alergias a medicamentos</label>
+          <input type="text" id="allergies" placeholder="Ex: Dipirona, Penicilina, AAS..." />
+        </div>
+      </div>
+    </div>
+
+    <!-- SINTOMAS -->
+    <div class="form-section">
+      <div class="form-section-label">Queixa principal</div>
+      <div class="field">
+        <label>Sintomas relatados pelo paciente</label>
+        <textarea id="symptoms" placeholder="Ex: Cefaleia intensa, tontura, náusea, dor torácica..."></textarea>
+      </div>
+    </div>
+
+    <button class="btn-run" id="btn-run" onclick="runTriage()">
+      <div class="spinner" id="spinner"></div>
+      <span id="btn-text">Processar triagem</span>
+    </button>
+
+    <div class="error-msg" id="error-msg"></div>
+
+    <hr class="divider" id="divider" style="display:none;" />
+
+    <!-- RESULTADO -->
+    <div class="result-section" id="result-section">
+      <div class="result-header">
+        <h2>Resultado da triagem</h2>
+        <p id="result-timestamp"></p>
+      </div>
+
+      <div class="patient-id-bar" id="patient-id-bar" style="display:none;">
+        <div class="pid-avatar" id="pid-avatar">—</div>
+        <div class="pid-info">
+          <div class="pid-name" id="pid-name">—</div>
+          <div class="pid-age" id="pid-age">—</div>
+        </div>
+      </div>
+
+      <div class="classification-card" id="clf-card">
+        <div class="clf-top">
+          <div>
+            <div class="clf-badge" id="clf-badge">—</div>
+            <div class="clf-urgency" id="clf-urgency" style="margin-top:10px;">—</div>
+          </div>
+          <div class="clf-time">
+            <div class="t-label">Espera máxima</div>
+            <div class="t-value" id="clf-time">—</div>
+          </div>
+        </div>
+
+        <div class="metrics-row">
+          <div class="metric-card">
+            <div class="mc-label">Temperatura</div>
+            <div class="mc-value" id="r-temp">—</div>
+          </div>
+          <div class="metric-card">
+            <div class="mc-label">Pressão arterial</div>
+            <div class="mc-value" id="r-bp">—</div>
+          </div>
+          <div class="metric-card">
+            <div class="mc-label">Classificação</div>
+            <div class="mc-value" id="r-color-text">—</div>
+          </div>
+        </div>
+
+        <div class="alert-row" id="alert-row">
+          <strong>⚠ Sinais de alerta:</strong>
+          <span id="alert-text"></span>
+        </div>
+
+        <div class="tags-group" id="comorbid-group">
+          <div class="tags-label">Comorbidades identificadas</div>
+          <div class="tags" id="comorbid-tags"></div>
+        </div>
+
+        <div class="tags-group" id="allergy-group">
+          <div class="tags-label">Alergias registradas</div>
+          <div class="tags" id="allergy-tags"></div>
+        </div>
+      </div>
+
+      <div class="json-wrap">
+        <button class="json-toggle" onclick="toggleJson()">
+          <span>{ }</span> Ver saída JSON técnica
+        </button>
+        <div class="json-block" id="json-block"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const COLOR_STYLES = {
+  VERMELHO: { color: 'var(--red)', bg: 'var(--red-bg)', border: 'var(--red-border)', dot: '#e24b4a' },
+  LARANJA:  { color: 'var(--orange)', bg: 'var(--orange-bg)', border: 'var(--orange-border)', dot: '#f59e0b' },
+  AMARELO:  { color: 'var(--yellow)', bg: 'var(--yellow-bg)', border: 'var(--yellow-border)', dot: '#d4c200' },
+  VERDE:    { color: 'var(--green)', bg: 'var(--green-bg)', border: 'var(--green-border)', dot: '#22c55e' },
+};
+
+function parseTags(str) {
+  return (str || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
+}
+
+function fallbackTriage(temp, sys, dia, history, symptoms) {
+  const histLow = (history || '').toLowerCase();
+  const sympLow = (symptoms || '').toLowerCase();
+  const hasChronic = ['diabetes','câncer','cancer','hipertensão','hipertensao','cardiopatia','insuficiência','insuficiencia','doença renal'].some(k => histLow.includes(k));
+  const isCritical = /desmaio|perda de consciência|paralisia|convuls|infarto|avc|dispneia grave/.test(sympLow);
+  const hasSeverePain = /dor (severa|intensa|forte)|cefaleia intensa|enxaqueca/.test(sympLow);
+  const alertas = [];
+  if (temp > 40 || temp < 35) alertas.push('Temperatura crítica (' + temp.toFixed(1) + '°C)');
+  if (sys > 180 || dia > 120) alertas.push('Crise hipertensiva (' + sys + '/' + dia + ' mmHg)');
+  if (isCritical) alertas.push('Sintoma crítico detectado');
+  if (hasSeverePain) alertas.push('Dor severa relatada');
+
+  let cor, urgencia, tempo;
+  if (temp > 40 || temp < 35 || sys > 180 || dia > 120 || isCritical) {
+    cor = 'VERMELHO'; urgencia = 'Emergência'; tempo = 'Imediato';
+  } else if (temp > 39 || sys > 160 || dia > 100 || hasSeverePain) {
+    cor = 'LARANJA'; urgencia = 'Muito urgente'; tempo = '10 minutos';
+  } else if ((temp >= 38 && temp <= 38.9) || sys >= 140 || dia >= 90 || hasChronic) {
+    cor = 'AMARELO'; urgencia = 'Urgente'; tempo = '60 minutos';
+  } else {
+    cor = 'VERDE'; urgencia = 'Pouco urgente'; tempo = '120 minutos';
+  }
+  return { cor, urgencia, tempo, alertas };
+}
+
+function syntaxHighlight(json) {
+  return json
+    .replace(/("[\w_]+")(\s*:)/g, '<span class="jk">$1</span>$2')
+    .replace(/:\s*(".*?")/g, ': <span class="js">$1</span>')
+    .replace(/:\s*(\d+\.?\d*)/g, ': <span class="jv">$1</span>')
+    .replace(/:\s*(true|false|null)/g, ': <span class="jv">$1</span>');
+}
+
+function toggleJson() {
+  const block = document.getElementById('json-block');
+  block.classList.toggle('show');
+}
+
+function setLoading(on) {
+  const btn = document.getElementById('btn-run');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btn-text');
+  btn.disabled = on;
+  spinner.style.display = on ? 'block' : 'none';
+  btnText.textContent = on ? 'Processando...' : 'Processar triagem';
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+
+function clearError() {
+  document.getElementById('error-msg').classList.remove('show');
+}
+
+function renderResult(result, patientName, patientAge) {
+  const c = result.classificacao;
+  const a = result.analise;
+  const st = COLOR_STYLES[c.cor] || COLOR_STYLES.VERDE;
+
+  // Patient ID bar
+  const idBar = document.getElementById('patient-id-bar');
+  if (patientName || patientAge) {
+    idBar.style.display = 'flex';
+    const initials = patientName
+      ? patientName.split(' ').filter(Boolean).slice(0,2).map(w => w[0].toUpperCase()).join('')
+      : '?';
+    document.getElementById('pid-avatar').textContent = initials;
+    document.getElementById('pid-name').textContent = patientName || 'Nome não informado';
+    document.getElementById('pid-age').textContent = patientAge ? patientAge + ' anos' : 'Idade não informada';
+  } else {
+    idBar.style.display = 'none';
+  }
+
+  // Card style
+  const card = document.getElementById('clf-card');
+  card.style.borderColor = st.border;
+  card.style.background = st.bg;
+  card.style.color = st.color;
+
+  // Badge
+  const badge = document.getElementById('clf-badge');
+  badge.textContent = c.cor;
+  badge.style.color = st.color;
+  badge.style.borderColor = st.border;
+  badge.style.background = 'transparent';
+
+  document.getElementById('clf-urgency').textContent = c.urgencia;
+  document.getElementById('clf-urgency').style.color = st.color;
+  document.getElementById('clf-time').textContent = c.tempo_espera;
+  document.getElementById('clf-time').style.color = st.color;
+
+  document.getElementById('r-temp').textContent = a.temperatura + '°C';
+  document.getElementById('r-bp').textContent = a.pressao + ' mmHg';
+  document.getElementById('r-color-text').textContent = c.cor;
+
+  // Alerts
+  const alertRow = document.getElementById('alert-row');
+  const sinais = a.sinais_alerta || '';
+  if (sinais) {
+    alertRow.classList.add('show');
+    document.getElementById('alert-text').textContent = sinais;
+  } else {
+    alertRow.classList.remove('show');
+  }
+
+  // Comorbidades
+  const comorbidas = Array.isArray(a.comorbidades) ? a.comorbidades : [a.comorbidades];
+  const comorbTags = document.getElementById('comorbid-tags');
+  comorbTags.innerHTML = comorbidas.filter(Boolean).map(x => `<span class="tag">${x}</span>`).join('') || '<span class="tag">Nenhuma informada</span>';
+
+  // Alergias
+  const alergias = Array.isArray(a.alergias) ? a.alergias : (a.alergias ? [a.alergias] : []);
+  const alerTags = document.getElementById('allergy-tags');
+  alerTags.innerHTML = alergias.filter(Boolean).map(x => `<span class="tag tag-alert">${x}</span>`).join('') || '<span class="tag">Nenhuma informada</span>';
+
+  // Timestamp
+  const now = new Date();
+  document.getElementById('result-timestamp').textContent =
+    'Gerado em ' + now.toLocaleDateString('pt-BR') + ' às ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  // JSON
+  const jsonPretty = JSON.stringify(result, null, 2);
+  document.getElementById('json-block').innerHTML = syntaxHighlight(jsonPretty);
+  document.getElementById('json-block').classList.remove('show');
+
+  // Show result
+  document.getElementById('divider').style.display = '';
+  document.getElementById('result-section').classList.add('show');
+}
+
+async function runTriage() {
+  clearError();
+
+  const patientName = document.getElementById('patient-name').value.trim();
+  const patientAge  = document.getElementById('patient-age').value.trim();
+  const temp = parseFloat(document.getElementById('temp').value);
+  const sys  = parseInt(document.getElementById('bp-sys').value);
+  const dia  = parseInt(document.getElementById('bp-dia').value);
+  const history  = document.getElementById('history').value.trim();
+  const allergies = document.getElementById('allergies').value.trim();
+  const symptoms  = document.getElementById('symptoms').value.trim();
+
+  if (isNaN(temp)) { showError('Informe a temperatura do paciente.'); return; }
+  if (isNaN(sys) || isNaN(dia)) { showError('Informe a pressão arterial sistólica e diastólica.'); return; }
+
+  const bpStr = sys + '/' + dia;
+
+  setLoading(true);
+
+  const prompt = `Você é um Motor de Processamento de Triagem Hospitalar. Analise os dados abaixo e retorne APENAS um JSON válido, sem texto adicional, sem markdown, sem blocos de código.
+
+Dados do paciente:
+- Nome: ${patientName || 'Não informado'}
+- Idade: ${patientAge ? patientAge + ' anos' : 'Não informada'}
+- Temperatura: ${temp}°C
+- Pressão Arterial: ${bpStr} mmHg
+- Histórico de doenças: ${history || 'Não informado'}
+- Alergias a medicamentos: ${allergies || 'Não informado'}
+- Sintomas relatados: ${symptoms || 'Não informado'}
+
+Protocolo de Manchester Adaptado:
+- VERMELHO (Emergência - Imediato): PA > 180/120 mmHg, Temp > 40°C ou < 35°C, ou condições críticas agudas.
+- LARANJA (Muito Urgente - 10 min): PA > 160/100 mmHg, Temp > 39°C, dor severa.
+- AMARELO (Urgente - 60 min): PA moderadamente alta, Temp 38–38.9°C, histórico de doenças crônicas com sintomas leves.
+- VERDE (Pouco Urgente - 120 min): Sinais vitais estáveis, sintomas leves, sem complicações.
+
+Retorne APENAS este JSON (sem markdown, sem texto extra):
+{
+  "paciente": {
+    "nome": "${patientName || 'Não informado'}",
+    "idade": "${patientAge ? patientAge + ' anos' : 'Não informada'}"
+  },
+  "analise": {
+    "temperatura": "${temp}",
+    "pressao": "${bpStr}",
+    "comorbidades": [],
+    "alergias": [],
+    "sinais_alerta": ""
+  },
+  "classificacao": {
+    "cor": "NOME_DA_COR",
+    "urgencia": "Nível de Risco",
+    "tempo_espera": "X minutos"
+  }
+}`;
+
+  let result;
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await resp.json();
+    const raw = data.content.map(b => b.text || '').join('');
+    const clean = raw.replace(/```json|```/g, '').trim();
+    result = JSON.parse(clean);
+  } catch(e) {
+    const fb = fallbackTriage(temp, sys, dia, history, symptoms);
+    result = {
+      paciente: {
+        nome: patientName || 'Não informado',
+        idade: patientAge ? patientAge + ' anos' : 'Não informada'
+      },
+      analise: {
+        temperatura: temp.toString(),
+        pressao: bpStr,
+        comorbidades: parseTags(history).length ? parseTags(history) : ['Sem histórico informado'],
+        alergias: parseTags(allergies).length ? parseTags(allergies) : ['Sem alergias informadas'],
+        sinais_alerta: fb.alertas.join('; ') || ''
+      },
+      classificacao: {
+        cor: fb.cor,
+        urgencia: fb.urgencia,
+        tempo_espera: fb.tempo
+      }
+    };
+  }
+
+  setLoading(false);
+  renderResult(result, patientName, patientAge);
+  document.getElementById('result-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+</script>
+</body>
+</html>
