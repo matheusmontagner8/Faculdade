@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Motor de Triagem Hospitalar</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0e14;
+    --surface: #111620;
+    --surface2: #181f2e;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.13);
+    --text: #e8edf5;
+    --muted: #6b7894;
+    --accent: #3b82f6;
+
+    --red:    #e24b4a;
+    --red-bg: rgba(226,75,74,0.1);
+    --red-border: rgba(226,75,74,0.3);
+
+    --orange:    #f59e0b;
+    --orange-bg: rgba(245,158,11,0.1);
+    --orange-border: rgba(245,158,11,0.3);
+
+    --yellow:    #d4c200;
+    --yellow-bg: rgba(212,194,0,0.1);
+    --yellow-border: rgba(212,194,0,0.3);
+
+    --green:    #22c55e;
+    --green-bg: rgba(34,197,94,0.1);
+    --green-border: rgba(34,197,94,0.3);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Instrument Sans', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .nav-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .nav-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: left;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.2s;
+  }
+
+  .nav-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .logo-icon svg { width: 18px; height: 18px; }
+  .logo-text { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; line-height: 1.2; }
+  .logo-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
+
+  .proto-block { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .proto-title {
+    padding: 10px 14px;
+    font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .proto-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .dot-red    { background: var(--red); }
+  .dot-orange { background: var(--orange); }
+  .dot-yellow { background: var(--yellow); }
+  .dot-green  { background: var(--green); }
+  .proto-info { flex: 1; }
+  .proto-color { font-weight: 600; font-size: 11px; color: var(--text); }
+  .proto-desc { font-size: 10px; color: var(--muted); margin-top: 1px; line-height: 1.4; }
+  .proto-time { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+
+  /* ── Main ── */
+  .main { padding: 40px 48px; max-width: 900px; }
+  
+  .tab-view { display: none; }
+  .tab-view.active { display: block; }
+
+  .page-header { margin-bottom: 36px; }
+  .page-header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px; font-weight: 800;
+    color: var(--text);
+  }
+
+  .form-section { margin-bottom: 28px; }
+  .form-section-label {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .form-section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+
+  .field input, .field textarea, .field select {
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--text);
+    outline: none;
+    width: 100%;
+  }
+  .field-full { grid-column: 1 / -1; }
+
+  .vitals-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+  .btn-run {
+    width: 100%; background: var(--accent); color: #fff; border: none; border-radius: 10px;
+    padding: 14px 24px; font-size: 14px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px;
+  }
+  
+  .btn-paciente { background: var(--green); margin-top: 20px;}
+
+  /* ── Result Section ── */
+  .result-section { display: none; margin-top: 20px; }
+  .result-section.show { display: block; }
+
+  .classification-card {
+    border-radius: 12px; border: 1px solid; padding: 24px; margin-bottom: 20px;
+    position: relative; overflow: hidden;
+  }
+
+  .clf-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+  .clf-badge { display: inline-block; padding: 5px 14px; border-radius: 999px; font-family: 'DM Mono', monospace; font-size: 11px; border: 1px solid; }
+  .clf-urgency { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; }
+
+  .metrics-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+  .metric-card { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  
+  /* Novos campos de detalhes no resultado */
+  .detail-group { margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px; }
+  .detail-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; letter-spacing: 0.05em; }
+  .detail-text { font-size: 13px; line-height: 1.5; color: var(--text); background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; }
+  
+  .tag-container { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tag { padding: 4px 12px; border-radius: 999px; font-size: 11px; background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .tag-warning { border-color: var(--red-border); color: #f09595; background: var(--red-bg); }
+
+  .alert-row { background: var(--red-bg); border: 1px solid var(--red-border); border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; display: none; }
+  .alert-row.show { display: flex; align-items: flex-start; gap: 10px; }
+
+  .patient-id-bar { display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px solid var(--border2); border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; }
+  .pid-avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-family: 'Syne', sans-serif; font-weight: 700; }
+
+  .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10 3v14M3 10h14" stroke="white" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </div>
+      <div><div class="logo-text">TriageEngine</div><div class="logo-sub">Protocolo Manchester</div></div>
+    </div>
+
+    <div class="nav-menu">
+        <div class="proto-title" style="margin-bottom: 8px;">Navegação</div>
+        <button class="nav-btn active" id="btn-tab-medico" onclick="switchTab('medico')">Área do Médico</button>
+        <button class="nav-btn" id="btn-tab-paciente" onclick="switchTab('paciente')">Área do Paciente</button>
+    </div>
+
+    <div class="proto-block">
+        <div class="proto-title">Classificação de risco</div>
+        <div class="proto-row"><div class="dot dot-red"></div><div class="proto-info"><div class="proto-color">Vermelho</div></div><div class="proto-time">Imediato</div></div>
+        <div class="proto-row"><div class="dot dot-orange"></div><div class="proto-info"><div class="proto-color">Laranja</div></div><div class="proto-time">10 min</div></div>
+        <div class="proto-row"><div class="dot dot-yellow"></div><div class="proto-info"><div class="proto-color">Amarelo</div></div><div class="proto-time">60 min</div></div>
+        <div class="proto-row"><div class="dot dot-green"></div><div class="proto-info"><div class="proto-color">Verde</div></div><div class="proto-time">120 min</div></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    
+    <div id="view-paciente" class="tab-view">
+        <div class="page-header"><h1>Ficha do Paciente</h1><p>Preencha os dados abaixo para iniciar seu atendimento.</p></div>
+        <div class="form-section">
+            <div class="form-section-label">Dados Pessoais</div>
+            <div class="field-grid">
+                <div class="field"><label>1- Nome Completo</label><input type="text" id="p-nome"></div>
+                <div class="field"><label>2- Idade</label><input type="number" id="p-idade"></div>
+                <div class="field field-full"><label>3- Sintomas</label><textarea id="p-sintomas"></textarea></div>
+                <div class="field"><label>4- Alergia a Medicamento?</label><select id="p-alergia"><option value="Não">Não</option><option value="Sim">Sim</option></select></div>
+                <div class="field"><label>5- Alguma Doença ou Comorbidade?</label><input type="text" id="p-comorbidade"></div>
+            </div>
+            <button class="btn-run btn-paciente" onclick="enviarDadosPaciente()">ENVIAR PARA TRIAGEM</button>
+        </div>
+    </div>
+
+    <div id="view-medico" class="tab-view active">
+        <div class="page-header"><h1>Motor de Triagem Hospitalar</h1><p>Painel de controle para classificação de risco clínico.</p></div>
+
+        <div class="form-section">
+          <div class="form-section-label">Identificação e Histórico</div>
+          <div class="field-grid">
+            <div class="field"><label>Nome completo</label><input type="text" id="patient-name" /></div>
+            <div class="field"><label>Idade (anos)</label><input type="number" id="patient-age" /></div>
+            <div class="field field-full"><label>Comorbidades</label><textarea id="history" placeholder="Ex: Diabetes, Hipertensão..."></textarea></div>
+            <div class="field field-full"><label>Alergias</label><input type="text" id="allergies" placeholder="Ex: Penicilina, Dipirona..." /></div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <div class="form-section-label">Sinais vitais e Queixa</div>
+          <div class="vitals-row">
+            <div class="field"><label>Temperatura (°C)</label><input type="number" id="temp" step="0.1" /></div>
+            <div class="field"><label>Pressão sistólica</label><input type="number" id="bp-sys" /></div>
+            <div class="field"><label>Pressão diastólica</label><input type="number" id="bp-dia" /></div>
+          </div>
+          <div class="field" style="margin-top:14px;"><label>Sintomas relatados</label><textarea id="symptoms"></textarea></div>
+        </div>
+
+        <button class="btn-run" id="btn-run" onclick="runTriage()">
+          <div class="spinner" id="spinner"></div><span id="btn-text">Processar triagem</span>
+        </button>
+
+        <hr style="border:none; border-top: 1px solid var(--border); margin: 36px 0;" />
+
+        <div class="result-section" id="result-section">
+          <div class="patient-id-bar">
+            <div class="pid-avatar" id="pid-avatar">—</div>
+            <div class="pid-info"><div class="pid-name" id="pid-name">—</div><div class="pid-age" id="pid-age">—</div></div>
+          </div>
+
+          <div class="classification-card" id="clf-card">
+            <div class="clf-top">
+              <div><div class="clf-badge" id="clf-badge">—</div><div class="clf-urgency" id="clf-urgency" style="margin-top:10px;">—</div></div>
+              <div class="clf-time"><div class="t-label" style="font-size:11px; color:var(--muted)">Espera máxima</div><div class="t-value" id="clf-time">—</div></div>
+            </div>
+            
+            <div class="metrics-row" id="metrics-result"></div>
+            
+            <div class="alert-row" id="alert-row"><strong>⚠ Alerta:</strong> <span id="alert-text"></span></div>
+
+            <div class="detail-group">
+                <div class="detail-label">Queixa e Sintomas</div>
+                <div class="detail-text" id="res-sintomas">—</div>
+            </div>
+
+            <div class="detail-group">
+                <div class="detail-label">Alergias a Medicamentos</div>
+                <div class="tag-container" id="res-alergias"></div>
+            </div>
+
+            <div class="detail-group">
+                <div class="detail-label">Comorbidades / Histórico</div>
+                <div class="tag-container" id="res-comorbidades"></div>
+            </div>
+          </div>
+        </div>
+    </div>
+  </main>
+</div>
+
+<script>
+function switchTab(tab) {
+    document.querySelectorAll('.tab-view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    if(tab === 'paciente') {
+        document.getElementById('view-paciente').classList.add('active');
+        document.getElementById('btn-tab-paciente').classList.add('active');
+    } else {
+        document.getElementById('view-medico').classList.add('active');
+        document.getElementById('btn-tab-medico').classList.add('active');
+    }
+}
+
+function enviarDadosPaciente() {
+    const nome = document.getElementById('p-nome').value;
+    const idade = document.getElementById('p-idade').value;
+    const sintomas = document.getElementById('p-sintomas').value;
+    const alergia = document.getElementById('p-alergia').value;
+    const comorbidade = document.getElementById('p-comorbidade').value;
+
+    if(!nome || !idade) { alert("Preencha nome e idade."); return; }
+
+    document.getElementById('patient-name').value = nome;
+    document.getElementById('patient-age').value = idade;
+    document.getElementById('symptoms').value = sintomas;
+    document.getElementById('allergies').value = (alergia === 'Sim' ? 'Alergia relatada' : 'Nenhuma');
+    document.getElementById('history').value = comorbidade || 'Nenhuma';
+
+    alert("Dados enviados! Verifique o Painel Médico.");
+    switchTab('medico');
+}
+
+const COLOR_STYLES = {
+  VERMELHO: { color: 'var(--red)', bg: 'var(--red-bg)', border: 'var(--red-border)' },
+  LARANJA:  { color: 'var(--orange)', bg: 'var(--orange-bg)', border: 'var(--orange-border)' },
+  AMARELO:  { color: 'var(--yellow)', bg: 'var(--yellow-bg)', border: 'var(--yellow-border)' },
+  VERDE:    { color: 'var(--green)', bg: 'var(--green-bg)', border: 'var(--green-border)' },
+};
+
+async function runTriage() {
+  const name = document.getElementById('patient-name').value;
+  const age = document.getElementById('patient-age').value;
+  const temp = parseFloat(document.getElementById('temp').value);
+  const sys = parseInt(document.getElementById('bp-sys').value);
+  const dia = parseInt(document.getElementById('bp-dia').value);
+  const symptoms = document.getElementById('symptoms').value;
+  const allergies = document.getElementById('allergies').value;
+  const history = document.getElementById('history').value;
+
+  if (isNaN(temp) || isNaN(sys)) { alert("Preencha Sinais Vitais."); return; }
+
+  document.getElementById('spinner').style.display = 'block';
+  
+  setTimeout(() => {
+    const res = fallbackTriage(temp, sys, dia);
+    renderResult(res, name, age, temp, sys, dia, symptoms, allergies, history);
+    document.getElementById('spinner').style.display = 'none';
+  }, 600);
+}
+
+function fallbackTriage(temp, sys, dia) {
+  let cor = 'VERDE', urgencia = 'Pouco urgente', tempo = '120 min', alertas = [];
+  if (temp > 40 || temp < 35 || sys > 180) { cor = 'VERMELHO'; urgencia = 'Emergência'; tempo = 'Imediato'; alertas.push("Sinais Vitais Críticos"); }
+  else if (temp > 39 || sys > 160) { cor = 'LARANJA'; urgencia = 'Muito urgente'; tempo = '10 min'; }
+  else if (temp >= 38 || sys >= 140) { cor = 'AMARELO'; urgencia = 'Urgente'; tempo = '60 min'; }
+  return { cor, urgencia, tempo, alertas };
+}
+
+function renderResult(res, name, age, temp, sys, dia, symptoms, allergies, history) {
+  const st = COLOR_STYLES[res.cor];
+  document.getElementById('result-section').classList.add('show');
+
+  document.getElementById('pid-name').textContent = name || "Paciente";
+  document.getElementById('pid-age').textContent = age + " anos";
+  document.getElementById('clf-badge').textContent = res.cor;
+  document.getElementById('clf-urgency').textContent = res.urgencia;
+  document.getElementById('clf-time').textContent = res.tempo;
+  
+  const card = document.getElementById('clf-card');
+  card.style.borderColor = st.border;
+  card.style.background = st.bg;
+  card.style.color = st.color;
+
+  document.getElementById('metrics-result').innerHTML = `
+    <div class="metric-card">Temp: ${temp}°C</div><div class="metric-card">PA: ${sys}/${dia}</div><div class="metric-card">Risco: ${res.cor}</div>
+  `;
+
+  // Renderização dos campos de texto e tags
+  document.getElementById('res-sintomas').textContent = symptoms || "Não relatados.";
+  
+  const alList = document.getElementById('res-alergias');
+  alList.innerHTML = allergies && allergies !== 'Nenhuma' ? `<span class="tag tag-warning">${allergies}</span>` : '<span class="tag">Nenhuma relatada</span>';
+  
+  const comList = document.getElementById('res-comorbidades');
+  comList.innerHTML = history && history !== 'Nenhuma' ? `<span class="tag">${history}</span>` : '<span class="tag">Sem histórico</span>';
+
+  const alertRow = document.getElementById('alert-row');
+  if(res.alertas.length > 0) { alertRow.classList.add('show'); document.getElementById('alert-text').textContent = res.alertas.join(', '); }
+  else { alertRow.classList.remove('show'); }
+}
+</script>
+</body>
+</html>
